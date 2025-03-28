@@ -1,7 +1,7 @@
-from neo4j import GraphDatabase
 import json
+from neo4j import GraphDatabase
 
-file_path = "../../sfbreader/data/SFB-flat.json"
+file_path = "../sfbreader/data/SFB-flat.json"
 
 # Read the JSON data from the local file
 with open(file_path, "r", encoding="utf-8") as file:
@@ -19,16 +19,16 @@ def create_graph(tx, record):
       - (l:Lag {name: ...})
       - (a:Avdelning {name: ...})
       - (u:Underavdelning {name: ...})
-      - (k:Kapitel {number: ...})
+      - (k:Kapitel {number: ..., namn:...})
       - (p:Paragraf {number: ...})
       - (p:Stycke {number: ..., text: ...})
     Then link them with relationships.
     """
 
     # Build string IDs
-    kapitel_namn = f"K{record['kapitel']}"
-    paragraf_namn = f"{kapitel_namn}P{record['paragraf']}"
-    stycke_namn = f"{paragraf_namn}S{record['stycke']}"
+    kapitel_id = f"K{record['kapitel']}"
+    paragraf_id = f"{kapitel_id}P{record['paragraf']}"
+    stycke_id = f"{paragraf_id}S{record['stycke']}"
 
     query = """
         MERGE (l:Lag { namn: $lagNamn })
@@ -42,9 +42,10 @@ def create_graph(tx, record):
         })
         MERGE (a)-[:HAR_UNDERAVDELNING]->(u)
             
-        MERGE (k:Kapitel { 
-          namn: $kapitelNamn, 
+        MERGE (k:Kapitel {
+          id: $kapitelId, 
           nummer: $kapitelNummer, 
+          namn: $kapitelNamn, 
           underavdelning: $underavdelning,
           avdelning: $avdelning,
           lag: $lagNamn
@@ -52,9 +53,9 @@ def create_graph(tx, record):
         MERGE (u)-[:HAR_KAPITEL]->(k)
         
         MERGE (p:Paragraf {
-          namn: $paragrafNamn, 
+          id: $paragrafId, 
           nummer: $paragrafNummer,
-          kapitel: $kapitelNamn,
+          kapitel: $kapitelId,
           underavdelning: $underavdelning,
           avdelning: $avdelning,
           lag: $lagNamn
@@ -62,10 +63,11 @@ def create_graph(tx, record):
         MERGE (k)-[:HAR_PARAGRAF]->(p)
         
         MERGE (s:Stycke {
-          namn: $styckeNamn, 
+          id: $styckeId, 
           nummer: $styckeNummer,
-          paragraf: $paragrafNamn,
-          kapitel: $kapitelNamn,
+          kategori: $kategori,
+          paragraf: $paragrafId,
+          kapitel: $kapitelId,
           underavdelning: $underavdelning,
           avdelning: $avdelning,
           lag: $lagNamn
@@ -80,24 +82,37 @@ def create_graph(tx, record):
         underavdelning=record["underavdelning"],
 
         # For the Kapitel node
-        kapitelNamn=kapitel_namn,
+        kapitelId=kapitel_id,
         kapitelNummer=record["kapitel"],
+        kapitelNamn=record["kapitel_namn"],
 
         # For the Paragraf node
-        paragrafNamn=paragraf_namn,
+        paragrafId=paragraf_id,
         paragrafNummer=record["paragraf"],
 
         # For the Stycke node
-        styckeNamn=stycke_namn,
+        kategori=record.get("kategori", ""),
+        styckeId=stycke_id,
         styckeNummer=record["stycke"],
 
         text=record["text"]
     )
 
+def link_next(tx):
+    tx.run("""
+        MATCH (p:Paragraf)-[:HAR_STYCKE]->(s)
+        WITH p, s
+        ORDER BY p.nummer, s.nummer  // adjust property names if needed
+        WITH collect(s) AS stycken
+        UNWIND range(0, size(stycken)-2) AS i
+        WITH stycken[i] AS s1, stycken[i+1] AS s2
+        RETURN id(s1) AS source, id(s2) AS target, 'NEXT' AS type
+    """)
 
 # Insert data into Neo4j
 with driver.session() as session:
     for record in data:
         session.execute_write(create_graph, record)
+    session.execute_write(link_next)
 
 driver.close()
