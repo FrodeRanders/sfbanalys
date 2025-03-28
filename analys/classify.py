@@ -26,6 +26,7 @@ data = Data(x=embeddings, edge_index=edge_index)
 
 print(data)
 # Data(x=[num_nodes, 768], edge_index=[2, num_edges])
+# i.e. Data(x=[2959, 768], edge_index=[2, 69348])
 
 label_map = {
     "beskrivning": 0,
