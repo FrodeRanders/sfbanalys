@@ -52,6 +52,18 @@ def run():
         edges_paragraf = session.execute_read(get_edges_same_paragraf)
         edges_kapitel = session.execute_read(get_edges_same_kapitel)
         df_edges = pd.DataFrame(edges_paragraf + edges_kapitel)
+
+        # Since I use Neo4j internal IDs (id(s)) directly as node IDs
+        # and these IDs are not guaranteed to be contiguous or zero-based,
+        # I have to reindex node IDs before passing to PyG.
+        # Create a mapping from Neo4j ID → index
+        node_ids = df_nodes["id"].tolist()  # Neo4j IDs
+        id_map = {old_id: new_id for new_id, old_id in enumerate(node_ids)}
+
+        # Apply it to edge list
+        df_edges["source"] = df_edges["source"].map(id_map)
+        df_edges["target"] = df_edges["target"].map(id_map)
+
         df_edges.to_csv("edges.csv", index=False)
         print(f"Wrote {len(df_edges)} edges to edges.csv")
 
