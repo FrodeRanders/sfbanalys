@@ -21,7 +21,8 @@ assert df_edges["source"].isnull().sum() == 0
 assert df_edges["target"].isnull().sum() == 0
 
 # === Build text embeddings ===
-model = SentenceTransformer('all-mpnet-base-v2')
+#model = SentenceTransformer("all-mpnet-base-v2")
+model = SentenceTransformer("KBLab/sentence-bert-swedish-cased")
 embeddings = model.encode(df_nodes['text'].tolist(), convert_to_tensor=True)
 
 # === Build edge index (PyG expects [2, num_edges] tensor) ===
@@ -125,3 +126,8 @@ print(classification_report(true, pred, target_names=["beskrivning", "definition
 with torch.no_grad():
     logits = model(data.x, data.edge_index)
     predicted_labels = logits.argmax(dim=1).cpu().numpy()
+    df_nodes["predicted_label"] = predicted_labels
+
+    label_inverse_map = {0: "beskrivning", 1: "definition", 2: "regel"}
+    df_nodes["predicted_kategori"] = df_nodes["predicted_label"].map(label_inverse_map)
+    df_nodes.to_csv("nodes_med_kategori.csv", index=False)
