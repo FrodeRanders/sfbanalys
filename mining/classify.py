@@ -104,26 +104,31 @@ def main():
             #if kapitel_namn:
             #    input_text = f"{input_text} [KAPITEL {kapitel_namn}]"
 
-            input_text = ""
-            paragraf_rubrik = record.get("paragraf_rubrik", None)
-            if paragraf_rubrik:
-                input_text = f"{input_text} [RUBRIK {paragraf_rubrik}]"
+            #paragraf_rubrik = record.get("paragraf_rubrik", None)
+            #if paragraf_rubrik:
+            #    input_text = f"{input_text} [RUBRIK {paragraf_rubrik}]"
 
-            paragraf_underrubrik = record.get("paragraf_underrubrik", None)
-            if paragraf_underrubrik:
-                input_text = f"{input_text} [UNDERRUBRIK {paragraf_underrubrik}]"
+            #paragraf_underrubrik = record.get("paragraf_underrubrik", None)
+            #if paragraf_underrubrik:
+            #    input_text = f"{input_text} [UNDERRUBRIK {paragraf_underrubrik}]"
 
-            input_text = f"{input_text} {record['text']}",
+            #input_text = f"{input_text} {record['text']}"
+
+            input_text = record['text']
             embedding = model.encode(input_text, convert_to_numpy=True)
 
+            # OBS:
+            # model.encode() returns a single 1D NumPy array of shape (384,) when passed a single string
             #
+
             texts.append(input_text)
-            embeddings.append(embedding[0])  # grab the vector, drop the extra dimension
+            embeddings.append(embedding)  # shape (384,)
 
 
     # Fit K-Means
     print("Klustring...")
-    np_embeddings = np.array(embeddings)
+    #np_embeddings = np.array(embeddings)
+    np_embeddings = np.vstack(embeddings)  # shape: (n_samples, 384)
 
     umap_model = umap.UMAP(n_neighbors=15, n_components=5, metric='cosine')
     umap_embeddings = umap_model.fit_transform(np_embeddings)
