@@ -6,6 +6,8 @@ import hdbscan
 from sentence_transformers import SentenceTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
+import plotly.express as px
 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -14,11 +16,39 @@ file_path = "../sfbreader/data/SFB-flat.json"
 model = SentenceTransformer("KBLab/sentence-bert-swedish-cased")
 
 
-def plot_clusters(embeddings_2d, labels, title="UMAP + HDBSCAN Clusters", filename=None):
-    import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-    import seaborn as sns
+def interactive_plot_clusters(embeddings_2d, labels, texts, extra_info=None, filename=None):
+    # Prepare DataFrame
+    df = pd.DataFrame({
+        "x": embeddings_2d[:, 0],
+        "y": embeddings_2d[:, 1],
+        "cluster": labels,
+        "text": texts
+    })
 
+    # Add extra columns if provided
+    if extra_info:
+        for key, values in extra_info.items():
+            df[key] = values
+
+    fig = px.scatter(
+        df,
+        x="x",
+        y="y",
+        color="cluster",
+        hover_data=["cluster", "text"] + (list(extra_info.keys()) if extra_info else []),
+        title="Interactive UMAP + HDBSCAN Clusters",
+        color_continuous_scale="Viridis"
+    )
+
+    fig.update_traces(marker=dict(size=5, opacity=0.7))
+
+    if filename:
+        fig.write_html(filename)
+        print(f"Lagrat till: {filename}")
+    else:
+        fig.show()
+
+def plot_clusters(embeddings_2d, labels, title="UMAP + HDBSCAN Clusters", filename=None):
     unique_labels = np.unique(labels)
     palette = sns.color_palette("hls", len(unique_labels))
     color_map = {label: palette[i] for i, label in enumerate(unique_labels)}
@@ -151,8 +181,16 @@ def main():
     umap_model_2d = umap.UMAP(n_neighbors=15, n_components=2, metric='cosine')
     umap_embeddings_2d = umap_model_2d.fit_transform(np_embeddings)
 
-    # Save plot to file (PNG, PDF, SVG, etc.)
-    plot_clusters(umap_embeddings_2d, labels, filename="kluster.png")
+    # Plot and save to file
+    #plot_clusters(umap_embeddings_2d, labels, filename="kluster.png")
+
+    extra_info = {
+        "kapitel": [r["kapitel"] for r in data],
+        "paragraf": [r["paragraf"] for r in data]
+        #"rubrik": [r.get("paragraf_rubrik", "") for r in data]
+    }
+
+    interactive_plot_clusters(umap_embeddings_2d, labels, texts, extra_info, "kluster.html")
 
 
 if __name__ == "__main__":

@@ -10,3 +10,4 @@ umap-learn==0.5.7
 hdbscan==0.8.40
 matplotlib==3.10.1
 seaborn==0.13.2
+plotly==6.0.1
