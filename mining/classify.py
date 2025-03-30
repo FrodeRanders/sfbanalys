@@ -1,8 +1,11 @@
 import json
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.cluster import KMeans
+import umap.umap_ as umap
+import hdbscan
 from sentence_transformers import SentenceTransformer
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -10,9 +13,36 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 file_path = "../sfbreader/data/SFB-flat.json"
 model = SentenceTransformer("KBLab/sentence-bert-swedish-cased")
 
-# Prova med 20 kluster
-K = 20
 
+def plot_clusters(embeddings_2d, labels, title="UMAP + HDBSCAN Clusters", filename=None):
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+    import seaborn as sns
+
+    unique_labels = np.unique(labels)
+    palette = sns.color_palette("hls", len(unique_labels))
+    color_map = {label: palette[i] for i, label in enumerate(unique_labels)}
+
+    colors = [color_map[label] if label != -1 else (0.6, 0.6, 0.6) for label in labels]
+
+    plt.figure(figsize=(10, 8))
+    plt.scatter(
+        embeddings_2d[:, 0], embeddings_2d[:, 1],
+        c=colors,
+        s=10,
+        alpha=0.7
+    )
+    plt.title(title)
+    plt.xlabel("UMAP-1")
+    plt.ylabel("UMAP-2")
+    plt.grid(True)
+    plt.tight_layout()
+
+    if filename:
+        plt.savefig(filename, dpi=300)
+        print(f"Lagrat till: {filename}")
+
+    plt.show()
 
 def main():
     texts = []
@@ -65,38 +95,34 @@ def main():
     print("Klustring...")
     np_embeddings = np.array(embeddings)
 
-    kmeans = KMeans(n_clusters=K, n_init="auto")
-    labels = kmeans.fit_predict(np_embeddings)
+    umap_model = umap.UMAP(n_neighbors=15, n_components=5, metric='cosine')
+    umap_embeddings = umap_model.fit_transform(np_embeddings)
+
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=10, metric='euclidean')
+    labels = clusterer.fit_predict(umap_embeddings)
+
     assert len(labels) == len(embeddings) == len(texts)
 
-    # For each labeled cluster, pick a representative text
+    # For each cluster (excluding noise), pick a representative text
+    cluster_ids = np.unique(labels)
+    cluster_ids = [cid for cid in cluster_ids if cid != -1]  # exclude noise
+
     representatives = []
-    for cluster_id in range(K):
-        # 'cluster_indices' is an array of integers, which are indices of the
-        # texts in this particular cluster
+
+    for cluster_id in cluster_ids:
         cluster_indices = np.where(labels == cluster_id)[0]
         if len(cluster_indices) == 0:
-            # No texts in this cluster (edge case if KMeans had an empty cluster)
             representatives.append(None)
             continue
 
-        # Grab centroid vector
-        centroid_vec = kmeans.cluster_centers_[cluster_id]  # shape (embedding_dim,)
-
-        # Only compare centroid with embeddings of current cluster
-        cluster_emb = np_embeddings[cluster_indices]  # shape: (n_cluster_docs, 384)
+        cluster_emb = np_embeddings[cluster_indices]
+        centroid_vec = np.mean(cluster_emb, axis=0)  # shape: (embedding_dim,)
         centroid_vec_2d = centroid_vec.reshape(1, -1)
 
-        # Compute similarities with *just* the cluster embeddings
         similarities = cosine_similarity(centroid_vec_2d, cluster_emb)[0]
-
-        # Now this index is local to cluster_emb
         best_local_idx = np.argmax(similarities)
-
-        # Get the global index from cluster_indices
         global_text_index = cluster_indices[best_local_idx]
 
-        # E.g., get the corresponding text
         rep_text = texts[global_text_index]
         representatives.append(rep_text)
 
@@ -108,16 +134,26 @@ def main():
 
     # `topic_dict` is a dict with keys = cluster_id, values = list of texts
     # `representatives` is a list where representatives[c] is the text for cluster c
-    for cluster_id, texter in topic_dict.items():
+    n_noise = np.sum(labels == -1)
+    print(f"Antal uteliggare (brus): {n_noise}")
+
+    for idx, cluster_id in enumerate(cluster_ids):
+        texter = topic_dict[cluster_id]
         print(f"Kluster: {cluster_id}\n")
-        rep_text = representatives[cluster_id]
+        rep_text = representatives[idx]
         if rep_text is not None:
             print(f" * Kluster-center: {rep_text}\n")
-
         for text in texter:
             print(f" - {text}")
-
         print("\n")
+
+    # Generate 2D UMAP embeddings
+    umap_model_2d = umap.UMAP(n_neighbors=15, n_components=2, metric='cosine')
+    umap_embeddings_2d = umap_model_2d.fit_transform(np_embeddings)
+
+    # Save plot to file (PNG, PDF, SVG, etc.)
+    plot_clusters(umap_embeddings_2d, labels, filename="kluster.png")
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,8 @@
-Ladda data och skapa inbäddning...
-Klustring...
+-----------------------------------------------------------------------
+ Inbäddning av text är här gjord med KBLab/sentence-bert-swedish-cased
+ och klustring med KMeans[ K = 20 ]
+-----------------------------------------------------------------------
+
 Kluster: 1
 
  * Kluster-center: (' [RUBRIK Förmåner vid sjukdom eller arbetsskada] [UNDERRUBRIK Arbetsskadeersättning m.m.] Bestämmelserna i 16-19 §§ tillämpas även i fråga om livränta till den försäkrade enligt 41, 43 och 44 kap.',)
