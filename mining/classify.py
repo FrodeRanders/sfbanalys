@@ -125,7 +125,6 @@ def main():
             embeddings.append(embedding)  # shape (384,)
 
 
-    # Fit K-Means
     print("Klustring...")
     #np_embeddings = np.array(embeddings)
     np_embeddings = np.vstack(embeddings)  # shape: (n_samples, 384)
