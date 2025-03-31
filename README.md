@@ -1,5 +1,13 @@
 # sfbanalys
-Analys av Socialförsäkringsbalken.
+Analys av Socialförsäkringsbalken med olika AI-verktyg.
+
+Här försöker jag bland annat berika en kunskapsgraf, menad att fånga lagstiftningen. 
+
+Én frågeställning handlar om att förstå vilka olika kategorier av text som finns; 
+* läsanvisningar, 
+* definition och beskrivning av begrepp, 
+* regler (kring rätten till, kring beräkning och kring samordning), 
+* osv.
 
 ## Setup
 
