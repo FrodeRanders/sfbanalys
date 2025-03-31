@@ -77,3 +77,12 @@ Att 'Val Acc' (validerings-exakthet) når 62-67% (toppar kring ~71%) betyder
 att modellen lyckas generalisera ganska bra för inte tidigare sett data.
 
 Detta är lovande med det _lilla_ dataset vi har :)
+
+
+## Funderingar
+
+[Mistral-7B-Instruct-v0.1-GGUF](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf?download=true)
+
+```
+➜  curl --output models/mistral-7b-instruct-v0.1.Q4_K_M.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf?download=true
+```

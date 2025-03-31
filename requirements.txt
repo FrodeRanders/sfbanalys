@@ -11,3 +11,6 @@ hdbscan==0.8.40
 matplotlib==3.10.1
 seaborn==0.13.2
 plotly==6.0.1
+llama-cpp-python==0.3.8
+typing==3.7.4.3
+
